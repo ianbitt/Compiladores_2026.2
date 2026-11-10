@@ -1,0 +1,12 @@
+Respostas para a Parte 2
+
+1- O número mínimo de registradores necessários é 1
+
+2- Apenas 3 registradores. Um para armazenar o valor da soma das multiplicações, um para
+armazenar o valor interno das multiplicações dentro dos parênteses e outro para receber 
+o próximo número a ser multiplicado dentro dos parênteses
+
+3- Imagino que com um bom gerenciamento do uso dos registradores é possível calcular
+expressões aritiméticas de tamanho arbitrário. Uma vez que operações de adição e subtração
+podem ser feitas com registradores e constantes e operações de divisão e multiplicação precisam
+de apenas dois registradores para serem feitas.

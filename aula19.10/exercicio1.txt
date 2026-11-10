@@ -1,0 +1,114 @@
+Exercicio 1 - analisaExpA para a linguagem EC2 (precedencia sem parenteses)
+
+Gramatica:
+
+<exp_a> ::= <exp_m> (('+' | '-') <exp_m>)*
+<exp_m> ::= <prim>  (('*' | '/') <prim>)*
+<prim>  ::= <num> | '(' <exp_a> ')'
+
+---------------------------------------------------------------------
+Ideia central
+---------------------------------------------------------------------
+
+Na EC1 toda operacao binaria vinha entre parenteses, entao o parser
+sempre sabia exatamente onde cada operacao comecava e terminava. Na
+EC2 isso nao e mais obrigatorio, entao e a propria estrutura da
+gramatica que precisa codificar a precedencia dos operadores.
+
+A gramatica tem duas camadas: exp_a (soma/subtracao) e exp_m
+(multiplicacao/divisao). Como '*' e '/' so aparecem "mais fundo" na
+gramatica (dentro de exp_m), eles sempre acabam se agrupando antes dos
+'+'/'-'. E por isso que "3 + 4 * 2" ja sai certo sem parenteses: o
+"4 * 2" e consumido inteiro dentro de uma unica chamada a
+analisaExpM(), e so depois o '+' do nivel de cima entra em acao.
+
+---------------------------------------------------------------------
+O obstaculo: o '*' do EBNF nao e recursao
+---------------------------------------------------------------------
+
+"(('+' | '-') <exp_m>)*" significa "zero ou mais repeticoes". Isso NAO
+e a mesma coisa que a recursao usada na EC1. Se essa regra fosse
+traduzida literalmente como recursao a esquerda
+(exp_a ::= exp_a '+' exp_m | exp_m), um parser descendente recursivo
+entraria em loop infinito, pois chamaria analisaExpA() de novo antes
+de consumir qualquer token.
+
+A solucao padrao e trocar a recursao por um LACO: analisa um exp_m, e
+depois fica num "enquanto" consumindo ('+' | '-') <exp_m> repetidamente,
+acumulando o resultado numa arvore associativa a esquerda (o que e o
+esperado: "1 - 2 - 3" deve virar (1-2)-3, nao 1-(2-3)).
+
+---------------------------------------------------------------------
+A peca nova que falta: "olhar" sem consumir
+---------------------------------------------------------------------
+
+Ate a Atividade 04, so existia uma funcao que CONSOME o token
+(proximoToken). Mas para decidir se o laco continua ou para, e preciso
+ESPIAR o proximo token sem avancar, porque ele pode nao ser '+'/'-'
+(nesse caso ele pertence a quem chamou essa funcao, nao ao laco atual).
+Por isso o enunciado ja da olharProximoToken() como ponto de partida:
+e uma funcao de peek, diferente da que consome.
+
+Se os tokens estao num vetor com um indice idx, isso e simples:
+
+    olharProximoToken()  -> retorna toks[idx]              // nao avanca
+    proximoToken()       -> retorna toks[idx]; idx = idx+1  // avanca (consome)
+
+---------------------------------------------------------------------
+Pseudocodigo
+---------------------------------------------------------------------
+
+analisaExpA():
+    e1 = analisaExpM()
+    tok = olharProximoToken()
+    enquanto tok.tipo == SOMA ou tok.tipo == SUB:
+        op = proximoToken()              # agora sim consome o '+' ou '-'
+        e2 = analisaExpM()
+        e1 = new OpBin(op.tipo, e1, e2)  # acumula a esquerda
+        tok = olharProximoToken()        # espia de novo p/ decidir se continua
+    retorna e1
+
+analisaExpM():
+    e1 = analisaPrim()
+    tok = olharProximoToken()
+    enquanto tok.tipo == MULT ou tok.tipo == DIV:
+        op = proximoToken()
+        e2 = analisaPrim()
+        e1 = new OpBin(op.tipo, e1, e2)
+        tok = olharProximoToken()
+    retorna e1
+
+analisaPrim():
+    tok = proximoToken()
+    se tok.tipo == NUMERO:
+        retorna new Const(inteiro(tok.lexema))
+    senao se tok.tipo == ABRE_PARENTESE:
+        e = analisaExpA()
+        verificaProxToken(FECHA_PARENTESE)
+        retorna e
+    senao:
+        sinaliza erro sintatico
+
+Observacao: analisaPrim chama analisaExpA (o nivel mais alto da
+gramatica) quando ve um parentese, porque dentro dos parenteses pode
+aparecer qualquer expressao completa (soma, subtracao, mult, div).
+
+---------------------------------------------------------------------
+Exemplo: "3 + 4 * 2 - 1"
+---------------------------------------------------------------------
+
+1. analisaExpA chama analisaExpM -> analisaPrim le "3". Espia: e '+',
+   nao e '*'/'/'. analisaExpM retorna so Const(3).
+2. De volta em analisaExpA: e1 = Const(3). Espia: e '+'. Consome o '+',
+   chama analisaExpM de novo.
+3. Esse analisaExpM: le "4" (prim), espia -> e '*'! Consome o '*', le
+   "2" (prim), monta OpBin(*, 4, 2). Espia de novo -> e '-', nao e
+   '*'/'/', retorna OpBin(*, 4, 2).
+4. De volta em analisaExpA: e1 = OpBin(+, Const(3), OpBin(*, 4, 2)).
+   Espia: e '-'. Consome, chama analisaExpM -> le "1", espia EOF,
+   retorna Const(1).
+5. e1 = OpBin(-, OpBin(+, 3, (4*2)), 1). Espia: EOF, laco termina.
+
+Resultado: ((3 + (4 * 2)) - 1)
+Precedencia correta ('*' antes de '+'/'-') e associatividade a
+esquerda, sem nenhum parentese no codigo-fonte.
