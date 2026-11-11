@@ -31,10 +31,6 @@ make testes
 
 Inclui programas válidos, programa sem declarações, identificadores com dígitos e erros léxicos/semânticos.
 
-## Alvo e runtime
-
-O assembly gerado usa GNU assembler, sintaxe AT&T, x86-64/Linux, `_start`, `.section .bss`, `.lcomm`, e chamadas `imprime_num` e `sair`, conforme o modelo do enunciado. O arquivo `runtime.s` compatível deve estar no diretório de trabalho ao montar/ligar. O PDF fornecido não especifica aqui o comando exato de linkedição nem inclui o runtime.
-
 ## Grupo e uso de LLM
 
 Grupo: 
